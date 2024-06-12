@@ -1,0 +1,146 @@
+version: '3'
+services:
+
+  gateway:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: go run ./cmd/gateway/main.go
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      - rabbitmq
+      - kafka
+
+  ad_service:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: go run ./cmd/ad/main.go
+    environment:
+      - DB_HOST=ad_db
+      - DB_PORT=5432
+      - DB_NAME=ad
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - RABBITMQ_HOST=rabbitmq
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      - ad_db
+      - rabbitmq
+      - kafka
+
+  order_service:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: go run ./cmd/order/main.go
+    environment:
+      - DB_HOST=order_db
+      - DB_PORT=5432
+      - DB_NAME=order
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - RABBITMQ_HOST=rabbitmq
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      - order_db
+      - rabbitmq
+      - kafka
+
+  shipment_service:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: go run ./cmd/shipment/main.go
+    environment:
+      - DB_HOST=shipment_db
+      - DB_PORT=5432
+      - DB_NAME=shipment
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - RABBITMQ_HOST=rabbitmq
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      - shipment_db
+      - rabbitmq
+      - kafka
+
+  dictionary_service:
+    image: golang:1.22-alpine
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: go run ./cmd/dictionary/main.go
+    environment:
+      - DB_HOST=ad_db
+      - DB_PORT=5432
+      - DB_NAME=dictionary
+      - DB_USER=user
+      - DB_PASSWORD=password
+      - RABBITMQ_HOST=rabbitmq
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      - dictionary_db
+      - rabbitmq
+      - kafka
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: 'rabbitmq'
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+  ad_db:
+    image: postgres
+    environment:
+      POSTGRES_DB: ad
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+
+  order_db:
+    image: postgres
+    environment:
+      POSTGRES_DB: order
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+
+  shipment_db:
+    image: postgres
+    environment:
+      POSTGRES_DB: shipment
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+
+  dictionary_db:
+    image: postgres
+    environment:
+      POSTGRES_DB: dictionary
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
